@@ -1,20 +1,26 @@
 #!/bin/bash
+set -e  
 
-VERSION=$1
-
-NEXUS_URL="http://${NEXUS_IP}:8081/repository"
+URL="http://${NEXUS_IP}:8081/service/rest/v1/search/assets"
 USER="${NEXUS_USER}"
 PASS="${NEXUS_PASS}"
 
-echo "Deploying version: $VERSION to $(hostname) using Nexus at ${NEXUS_IP}"
+echo "Fetching latest artifacts from Nexus at ${NEXUS_IP}..."
 
-mkdir -p ~/app_deploy && cd ~/app_deploy
+mkdir -p /root/app_deploy && cd /root/app_deploy
 
-curl -u "$USER:$PASS" -L "${NEXUS_URL}/spring-boot-repo/com/myapp/backend/${VERSION}/backend-${VERSION}.jar" -o backend.jar
+BACKEND_URL=$(curl -u "$USER:$PASS" -s -X GET "${URL}?repository=spring-boot-repo&maven.extension=jar&sort=version&direction=desc" \
+| grep -Po '"downloadUrl" : "\K[^"]*' | head -1)
 
+FRONTEND_URL=$(curl -u "$USER:$PASS" -s -X GET "${URL}?repository=angular-app-repo&sort=version&direction=desc" \
+| grep -Po '"downloadUrl" : "\K[^"]*' | head -1)
 
-curl -u "$USER:$PASS" -L "${NEXUS_URL}/angular-app-repo/frontend-${VERSION}.tar.gz" -o frontend.tar.gz
+echo "Downloading Backend: $BACKEND_URL"
+curl -u "$USER:$PASS" -L "$BACKEND_URL" -o backend.jar
+
+echo "Downloading Frontend: $FRONTEND_URL"
+curl -u "$USER:$PASS" -L "$FRONTEND_URL" -o frontend.tar.gz
 
 tar -xzf frontend.tar.gz && rm frontend.tar.gz
 
-echo "Artifacts downloaded and extracted successfully."
+echo "Latest artifacts deployed successfully to $(hostname)"
