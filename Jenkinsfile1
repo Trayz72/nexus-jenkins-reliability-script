@@ -24,7 +24,7 @@ pipeline {
                     },
                     "Clone Frontend": {
                         dir('frontend-app') {
-                            git branch: 'master', url: 'https://github.com/AeshaRana/Sales-dashboard-angular.git'
+                            git branch: 'main', url: 'https://github.com/AeshaRana/Sales-dashboard-angular.git'
                         }
                     }
                 )
