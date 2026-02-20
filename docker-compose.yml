@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  server-prod-1:
+    build: .
+    container_name: server-prod-1
+    ports:
+      - "2221:22"
+    networks:
+      - devops-net
+
+  server-prod-2:
+    build: .
+    container_name: server-prod-2
+    ports:
+      - "2222:22"
+    networks:
+      - devops-net
+
+networks:
+  devops-net:
+    driver: bridge

@@ -1,25 +1,46 @@
 pipeline {
     agent any
     parameters {
-        string(name: 'SERVER_IP', defaultValue: 'localhost', description: 'Target Docker Host IP')
-        string(name: 'SERVER_PORT', defaultValue: '2221', description: 'Target Docker SSH Port')
-        string(name: 'VERSION', defaultValue: '1.0.1', description: 'Version to Deploy')
+
+        string(name: 'SERVER_IP', defaultValue: '192.168.x.x', description: 'Your Laptop LAN IP (Do not use localhost)')
+        choice(name: 'SERVER_PORT', choices: ['2221', '2222'], description: 'Target Docker SSH Port')
+        string(name: 'VERSION', defaultValue: '1.0.0', description: 'Version to Deploy')
     }
-    stage('Transfer & Execute') {
-        steps {
-            script {
-               
-                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', 
-                                passwordVariable: 'NEXUS_PASS', 
-                                usernameVariable: 'NEXUS_USER')]) {
+    
+    stages {
+        stage('Transfer & Execute') {
+            steps {
+                script {
+                  
+                    def remote = [:]
+                    remote.name = "docker-server"
+                    remote.host = params.SERVER_IP
+                    remote.port = params.SERVER_PORT.toInteger()
+                    remote.allowAnyHosts = true 
                     
-                    
-                    sshCommand remote: remote, command: """
-                        export NEXUS_USER='${NEXUS_USER}'
-                        export NEXUS_PASS='${NEXUS_PASS}'
-                        chmod +x download.sh
-                        ./download.sh ${params.VERSION}
-                    """
+                    withCredentials([usernamePassword(credentialsId: 'ssh-creds', 
+                                     passwordVariable: 'SSH_PASS', 
+                                     usernameVariable: 'SSH_USER')]) {
+                        
+                        remote.user = SSH_USER
+                        remote.password = SSH_PASS
+                        
+                        sshPut remote: remote, from: 'download.sh', into: '.'
+                        
+
+                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials', 
+                                         passwordVariable: 'NEXUS_PASS', 
+                                         usernameVariable: 'NEXUS_USER')]) {
+                            
+                            sshCommand remote: remote, command: """
+                                export NEXUS_USER='${NEXUS_USER}'
+                                export NEXUS_PASS='${NEXUS_PASS}'
+                                export NEXUS_IP='${params.SERVER_IP}'
+                                chmod +x download.sh
+                                ./download.sh ${params.VERSION}
+                            """
+                        }
+                    }
                 }
             }
         }
