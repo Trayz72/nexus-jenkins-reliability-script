@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+    parameters {
+        string(name: 'SERVER_IP', defaultValue: 'localhost', description: 'Target Docker Host IP')
+        string(name: 'SERVER_PORT', defaultValue: '2221', description: 'Target Docker SSH Port')
+        string(name: 'VERSION', defaultValue: '1.0.1', description: 'Version to Deploy')
+    }
+    stage('Transfer & Execute') {
+        steps {
+            script {
+               
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', 
+                                passwordVariable: 'NEXUS_PASS', 
+                                usernameVariable: 'NEXUS_USER')]) {
+                    
+                    
+                    sshCommand remote: remote, command: """
+                        export NEXUS_USER='${NEXUS_USER}'
+                        export NEXUS_PASS='${NEXUS_PASS}'
+                        chmod +x download.sh
+                        ./download.sh ${params.VERSION}
+                    """
+                }
+            }
+        }
+    }
+}

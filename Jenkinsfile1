@@ -1,0 +1,31 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk17' 
+        nodejs 'node20'
+    }
+    environment {
+        NEXUS_CREDS = credentials('nexus-credentials')
+        NEXUS_BASE_URL = "http://localhost:8081/repository"
+        VERSION = "1.0.${env.BUILD_NUMBER}"
+    }
+    stages {
+        stage('Build & Push Backend') {
+            steps {
+                dir('spring-boot-app') {
+                    sh './mvnw clean package -DskipTests'
+                    sh "curl -v -u ${NEXUS_CREDS} --upload-file target/*.jar ${NEXUS_BASE_URL}/spring-boot-repo/com/myapp/backend/${VERSION}/backend-${VERSION}.jar"
+                }
+            }
+        }
+        stage('Build & Push Frontend') {
+            steps {
+                dir('angular-app') {
+                    sh 'npm install && npm run build --configuration=production'
+                    sh "tar -czf frontend-${VERSION}.tar.gz -C dist/app-name ."
+                    sh "curl -v -u ${NEXUS_CREDS} --upload-file frontend-${VERSION}.tar.gz ${NEXUS_BASE_URL}/angular-app-repo/frontend-${VERSION}.tar.gz"
+                }
+            }
+        }
+    }
+}
