@@ -2,60 +2,83 @@ pipeline {
     agent any
     
     tools {
-        jdk 'jdk17' 
+        jdk 'jdk17'        
         nodejs 'node20'
     }
     
     environment {
         NEXUS_CREDS = credentials('nexus-credentials')
-        // Use your laptop's LAN IP so it works from any "server" later
         NEXUS_BASE_URL = "http://localhost:8081/repository"
         VERSION = "1.0.${env.BUILD_NUMBER}"
     }
     
     stages {
+
         stage('Checkout Code') {
             steps {
-                parallel {
-                    stage('Clone Backend') {
-                        steps {
-                            dir('backend-app') {
-                                git branch: 'main', url: 'https://github.com/Trayz72/sample-springboot-app.git'
-                            }
+                parallel(
+                    "Clone Backend": {
+                        dir('backend-app') {
+                            git branch: 'main', url: 'https://github.com/Trayz72/sample-springboot-app.git'
+                        }
+                    },
+                    "Clone Frontend": {
+                        dir('frontend-app') {
+                            git branch: 'master', url: 'https://github.com/AeshaRana/Sales-dashboard-angular.git'
                         }
                     }
-                    stage('Clone Frontend') {
-                        steps {
-                            dir('frontend-app') {
-                                git branch: 'master', url: 'https://github.com/AeshaRana/Sales-dashboard-angular.git'
-                            }
-                        }
-                    }
-                }
+                )
             }
         }
 
-        stage('Build & Push Backend') {
+        stage('Build Backend') {
             steps {
                 dir('backend-app') {
-                    // Using sh 'mvn' if you have it installed, otherwise './mvnw'
                     sh 'mvn clean package -DskipTests'
-                    sh "curl -v -u ${NEXUS_CREDS} --upload-file target/*.jar ${NEXUS_BASE_URL}/spring-boot-repo/com/myapp/backend/${VERSION}/backend-${VERSION}.jar"
                 }
             }
         }
 
-        stage('Build & Push Frontend') {
+        stage('Build Frontend') {
             steps {
                 dir('frontend-app') {
                     sh 'npm install'
                     sh 'npm run build --configuration=production'
-                    // Navigate into the dist folder to zip the actual assets
+                }
+            }
+        }
+
+        stage('Package Frontend') {
+            steps {
+                dir('frontend-app') {
                     script {
                         def distDir = sh(script: 'ls dist', returnStdout: true).trim()
                         sh "tar -czf frontend-${VERSION}.tar.gz -C dist/${distDir} ."
                     }
-                    sh "curl -v -u ${NEXUS_CREDS} --upload-file frontend-${VERSION}.tar.gz ${NEXUS_BASE_URL}/angular-app-repo/frontend-${VERSION}.tar.gz"
+                }
+            }
+        }
+
+        stage('Push Backend to Nexus') {
+            steps {
+                dir('backend-app') {
+                    sh """
+                    curl -v -u ${NEXUS_CREDS_USR}:${NEXUS_CREDS_PSW} \
+                    --upload-file target/*.jar \
+                    ${NEXUS_BASE_URL}/spring-boot-repo/com/myapp/backend/${VERSION}/backend-${VERSION}.jar
+                    """
+                }
+            }
+        }
+
+        stage('Push Frontend to Nexus') {
+            steps {
+                dir('frontend-app') {
+                    sh """
+                    curl -v -u ${NEXUS_CREDS_USR}:${NEXUS_CREDS_PSW} \
+                    --upload-file frontend-${VERSION}.tar.gz \
+                    ${NEXUS_BASE_URL}/angular-app-repo/frontend-${VERSION}.tar.gz
+                    """
                 }
             }
         }
@@ -63,7 +86,10 @@ pipeline {
     
     post {
         success {
-            echo "Build ${VERSION} is now available in Nexus."
+            echo "✅ Build ${VERSION} is now available in Nexus."
+        }
+        failure {
+            echo "❌ Build failed. Check logs."
         }
     }
 }
