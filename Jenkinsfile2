@@ -37,6 +37,7 @@ pipeline {
                                 export NEXUS_IP='${params.SERVER_IP}'
                                 chmod +x download.sh
                                 ./download.sh 
+                                rm download.sh
                             """
                         }
                     }
