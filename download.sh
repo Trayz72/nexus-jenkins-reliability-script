@@ -13,5 +13,4 @@ curl $AUTH -L "${NEXUS_BASE}?repository=spring-boot-repo&maven.extension=jar&sor
 echo "Downloading latest frontend..."
 curl $AUTH -L "${NEXUS_BASE}?repository=angular-app-repo&sort=version&direction=desc" 
 
-tar -xzf frontend*.tar.gz && rm frontend*.tar.gz
 echo "Deployment complete."
