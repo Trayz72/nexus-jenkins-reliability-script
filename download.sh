@@ -8,10 +8,10 @@ AUTH="-u $NEXUS_USER:$NEXUS_PASS"
 mkdir -p /root/app_deploy && cd /root/app_deploy
 
 echo "Downloading latest backend..."
-curl $AUTH -L "${NEXUS_BASE}?repository=spring-boot-repo&maven.extension=jar&sort=version&direction=desc" -o backend.jar
+curl $AUTH -L "${NEXUS_BASE}?repository=spring-boot-repo&maven.extension=jar&sort=version&direction=desc" 
 
 echo "Downloading latest frontend..."
-curl $AUTH -L "${NEXUS_BASE}?repository=angular-app-repo&sort=version&direction=desc" -o frontend.tar.gz
+curl $AUTH -L "${NEXUS_BASE}?repository=angular-app-repo&sort=version&direction=desc" 
 
-tar -xzf frontend.tar.gz && rm frontend.tar.gz
+tar -xzf frontend*.tar.gz && rm frontend*.tar.gz
 echo "Deployment complete."
